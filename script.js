@@ -4,62 +4,79 @@ const ctx = canvas.getContext('2d');
 const w = canvas.width = innerWidth;
 const h = canvas.height = innerHeight;
 
-function draw() {
-    ctx.fillStyle = 'hsl(0, 0%, 7%)';
-    ctx.fillRect(0, 0, w, h);
+ctx.fillStyle = 'hsl(0, 0%, 7%)';
+ctx.fillRect(0, 0, w, h);
 
-    ctx.beginPath();
-    ctx.fillStyle = 'white';
-    ctx.arc(0, h / 2, 24, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
+const imgData = ctx.createImageData(w, h);
+const data = imgData.data;
+const brightArr = new Array(w * h);
 
-    requestAnimationFrame(draw);
+// for (let x = 0; x < w; x++) {
+//     for (let y = 0; y < h; y++) {
+
+        
+//         let bright = Math.floor(Math.random() * 255);
+
+//         let pix = (x + y * w) * 4;
+//         data[pix + 0] = bright;
+//         data[pix + 1] = bright;
+//         data[pix + 2] = bright;
+//         data[pix + 3] = 255;
+
+//         brightArr.push(bright);
+//     }
+// }
+
+// ctx.putImageData(imgData, 0, 0);
+function randBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function perlinNoise(x, y) {
-    const x0 = Math.floor(x);
-    const x1 = x0 + 1;
-    const y0 = Math.floor(y);
-    const y1 = y0 + 1;
+class Perlin2D {
+    constructor() {
+        this.permutationTable = Array.from(new Uint8Array(1024).keys());
+        this.rand = Math.random()
+    }
 
-    const sx = x - x0;
-    const sy = y - y0;
+    noise(x0, y0, i) {
+        // upper left corner
+        const int_x0 = Math.floor(x0);
+        const int_y0 = Math.floor(y0);
 
-    let n0, n1, ix0, ix1;
+        const local_x0 = x0 - int_x0;
+        const local_y0 = y0 - int_y0;
 
-    n0 = dotGridGradient(x0, y0, x, y);
-    n1 = dotGridGradient(x1, y0, x, y);
-    ix0 = interpolate(n0, n1, sx);
-    
-    n0 = dotGridGradient(x0, y1, x, y);
-    n1 = dotGridGradient(x1, y1, x, y);
-    ix1 = interpolate(n0, n1, sx);
+        //              value0 + + + value1
+        //                +            + 
+        //                +            +
+        //                +            + 
+        //              value3 + + + value4
 
-    return interpolate(ix0, ix1, sy);
+        topLeftGradient = getGradVector(int_x0, int_y0);
+
+        let upper = lepr(value0, value1, local_x0);
+        let lower = lepr(value3, value4, local_x0)
+
+        let n = lepr(upper, lower, local_y0)
+    }
+
+    // linear interpolation
+    lepr(a, b, t) {
+        // a * (t - 1) + b * t
+        return a + (b - a) * t;
+    }
+
+    getGradVector(x, y) {
+        let v = Math.floor(((x * 1836311903) ^ (y * 2971215073) + 4807526976) & 1023);
+        switch (vector) {
+            case 0: return [1, 0];
+            case 1: return [-1, 0];
+            case 2: return [0, 1];
+            case 3: return [0, -1];
+        }
+    }
+
+    dotProduct(a, b) {
+        return a[0] * b[0] + a[1] * b[1];
+    }
 }
-
-function dotGridGradient(ix, iy, x, y) {
-    const dx = x - ix;
-    const dy = y - iy;
-
-    return dx * Math.random() + dy * Math.random();
-}
-
-function interpolate(edge0, edge1, x) {
-    x = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-
-    return 6 * x ** 5 - 15 * x ** 4 + 10 * x ** 3;
-}
-
-function clamp(x, lowerLimit, upperLimit) {
-    x = x < lowerLimit ? lowerLimit : x;
-    x = x > upperLimit ? upperLimit : x;
-
-    return x;
-}
-
-draw();
-
-let iiii = perlinNoise(2, 2)
-console.log(iiii);
