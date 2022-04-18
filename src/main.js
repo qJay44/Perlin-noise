@@ -10,7 +10,7 @@ const noiseGenerator = new NoiseGenerator(seed);
 
 const camera = new Camera({x: 50000, z: 50000});
 const renderer = new Renderer();
-const app = new Application(title, renderer, noiseGenerator);
+const app = new Application(title, renderer, noiseGenerator, camera);
 
 app.loadEvents();
 app.runLoop();
