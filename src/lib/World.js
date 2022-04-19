@@ -2,7 +2,7 @@ class World {
     constructor(noiseGenerator) {
         this.chunkManger = new ChunkManager(noiseGenerator);
         // number of chunks to render vertically and horizontally
-        this.renderDistance = 10;
+        this.renderDistance = 12;
         this.loadDistance = 2;
     }
 
