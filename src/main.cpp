@@ -7,8 +7,8 @@ int main() {
   sf::RenderWindow window;
   sf::Font mainFont;
 
-  window.create(sf::VideoMode(WIDTH, HEIGHT), "Field flow", sf::Style::Close);
-  window.setFramerateLimit(75);
+  window.create(sf::VideoMode(WIDTH, HEIGHT), "Perlin noise", sf::Style::Close);
+  window.setFramerateLimit(90);
 
   mainFont.loadFromFile("../../src/fonts/Minecraft rus.ttf");
 
@@ -16,22 +16,26 @@ int main() {
 
   PerlinNoise pn;
   sf::VertexArray vertices{sf::Points, WIDTH * HEIGHT};
+  sf::Clock clock;
+
+  for (int x = 0; x < WIDTH; x++)
+    for (int y = 0; y < HEIGHT; y++)
+      vertices[x + y * WIDTH] = sf::Vertex(vec2(x, y));
 
   auto generateNoise = [&]() {
-    for (int x = 0; x < WIDTH; x++) {
-      for (int y = 0; y < HEIGHT; y++) {
-        vec2 pos = vec2(x, y);
-        float n =
-          pn.noise2D(pos / 64.f) * 1.f +
-          pn.noise2D(pos / 32.f) * 0.5f +
-          pn.noise2D(pos / 16.f) * 0.25f +
-          pn.noise2D(pos / 8.f ) * 0.125f;
+    float time = clock.getElapsedTime().asSeconds();
+    for (int i = 0; i < vertices.getVertexCount(); i++) {
+      const vec2& pos = vertices[i].position;
 
-        sf::Uint8 alpha = (n * 0.5f + 0.5f) * 255; // from [-1, 1] to [0, 1] to [0, 255]
-        sf::Color color = sf::Color(255, 255, 255, alpha);
+      float n =
+        pn.noise3D(vec3(pos, time * 30.f) / 128.f) / 1.f +
+        pn.noise3D(vec3(pos, time * 30.f) / 64.f ) / 2.f +
+        pn.noise3D(vec3(pos, time * 64.f) / 32.f ) / 16.f;
 
-        vertices[x + y * WIDTH] = sf::Vertex(pos, color);
-      }
+      vec3 mix1 = vec3::mix(vec3(1.f, 1.f, 0.f), vec3(1.f, 0.2f, 0.f), n + 1.f);
+      vec3 mix2 = vec3::mix(mix1, vec3(0.1f, 0.f, 0.f), n * 0.5f + 0.5f);
+
+      vertices[i].color = sf::Color(mix2.x * 255, mix2.y * 255, mix2.z * 255);
     }
   };
 
@@ -57,7 +61,7 @@ int main() {
         }
     }
 
-    window.clear(sf::Color(30, 30, 30));
+    window.clear();
     window.draw(vertices);
     window.display();
   }
