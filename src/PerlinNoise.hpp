@@ -1,34 +1,95 @@
-#include "preferences.h"
-#include "utils/vector.hpp"
+// https://gpfault.net/posts/perlin-noise.txt.html
+// https://en.wikipedia.org/wiki/Perlin_noise
+
 #include <cmath>
 #include <vector>
 
 class PerlinNoise {
+  struct vec2 {
+    float x, y;
+
+    inline static float dot(const vec2& lhs, const vec2& rhs) {
+      return lhs.x * rhs.x + lhs.y * rhs.y;
+    }
+
+    // TODO: Kinda slow
+    inline static void normalize(vec2& v) {
+      float m = v.magnitude();
+      v.x /= m;
+      v.y /= m;
+    }
+    vec2() = default;
+    vec2(float x, float y) : x(x), y(y) {}
+
+    vec2 operator +(const vec2& rhs) const { return vec2(x + rhs.x, y + rhs.y); }
+    vec2 operator -(const vec2& rhs) const { return vec2(x - rhs.x, y - rhs.y); }
+
+    float magnitude() const {
+      return sqrt(x * x + y * y);
+    }
+  };
+
+  struct vec3 {
+    float x, y, z;
+
+    inline static float dot(const vec3& lhs, const vec3& rhs) {
+      return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+    }
+
+    // TODO: Kinda slow
+    inline static void normalize(vec3& v) {
+      float m = v.magnitude();
+      v.x /= m;
+      v.y /= m;
+      v.z /= m;
+    }
+
+    vec3() = default;
+    vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+
+    vec3 operator +(const vec3& rhs) const { return vec3(x + rhs.x, y + rhs.y, z + rhs.z); }
+    vec3 operator -(const vec3& rhs) const { return vec3(x - rhs.x, y - rhs.y, z - rhs.z); }
+
+    float magnitude() const {
+      return sqrt(x * x + y * y + z * z);
+    }
+  };
+
+  int size;
   std::vector<vec3> permutation;
 
   void generate() {
-    for (int x = 0; x < WIDTH; x++)
-      for (int y = 0; y < HEIGHT; y++)
-        permutation[x + y * WIDTH] = vec3::randomUnit();
+    for (vec3& v : permutation) {
+      v = vec3(
+        // Random in [0, 255] to [0, 1] to [-1, 1]
+        ((rand() % 256) / 255.f) * 2.f - 1.f,
+        ((rand() % 256) / 255.f) * 2.f - 1.f,
+        ((rand() % 256) / 255.f) * 2.f - 1.f
+      );
+    }
   }
 
   int gradient(int i) const {
-    return permutation[i].x > 0.5f ? 1 : -1;
+    return permutation[i % permutation.size()].x;
   }
 
   vec2 gradient(const vec2& p) const {
-    int x = static_cast<int>(p.x);
-    int y = static_cast<int>(p.y);
-    vec3 rgb = permutation[x + y * WIDTH];
+    int i = static_cast<int>(p.x) % size;
+    int j = static_cast<int>(p.y) % size;
+    const vec3& v = permutation[i + j * size];
+    vec2 rg = vec2(v.x, v.y);
+    vec2::normalize(rg);
 
-    return vec2(rgb.x, rgb.y);
+    return rg;
   }
 
   vec3 gradient(const vec3& p) const {
-    int x = static_cast<int>(p.x);
-    int y = static_cast<int>(p.y);
+    int i = static_cast<int>(p.x) % size;
+    int j = static_cast<int>(p.y) % size;
+    vec3 rgb = permutation[i + j * size];
+    vec3::normalize(rgb);
 
-    return permutation[x + y * WIDTH];
+    return rgb;
   }
 
   float fade(float t) const {
@@ -36,8 +97,10 @@ class PerlinNoise {
   }
 
   public:
-    PerlinNoise() {
-      permutation.reserve(WIDTH * HEIGHT);
+    // @param size: the square size of the permutation table
+    PerlinNoise(int size) : size(size) {
+      permutation.resize(size * size);
+      permutation.reserve(size * size);
       generate();
     }
 
@@ -57,8 +120,9 @@ class PerlinNoise {
     }
 
     // Return value in [-1, 1]
-    float noise2D(const vec2& p) const {
-      vec2 p0 = vec2::floor(p);               // Top-left
+    float noise2D(float x, float y) const {
+      vec2 p = vec2(x, y);
+      vec2 p0 = vec2(floor(x), floor(y));     // Top-left
       vec2 p1 = p0 + vec2(1.f, 0.f);          // Top-right
       vec2 p2 = p0 + vec2(0.f, 1.f);          // Bottom-left
       vec2 p3 = p0 + vec2(1.f, 1.f);          // Bottom-right
@@ -83,9 +147,10 @@ class PerlinNoise {
       return (1.f - fade_t1) * p0p1 + fade_t1 * p2p3;
     }
 
-    float noise3D(vec3 p) {
+    float noise3D(float x, float y, float z) {
       /* Calculate lattice points. */
-      vec3 p0 = vec3::floor(p);
+      vec3 p = vec3(x, y, z);
+      vec3 p0 = vec3(floor(p.x), floor(p.y), floor(p.z));
       vec3 p1 = p0 + vec3(1.0, 0.0, 0.0);
       vec3 p2 = p0 + vec3(0.0, 1.0, 0.0);
       vec3 p3 = p0 + vec3(1.0, 1.0, 0.0);

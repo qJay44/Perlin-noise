@@ -1,45 +1,35 @@
-#include "preferences.h"
+#include "pch.h"
 #include "PerlinNoise.hpp"
 
 int main() {
-  // Setup SFML //
-
   sf::RenderWindow window;
-  sf::Font mainFont;
-
   window.create(sf::VideoMode(WIDTH, HEIGHT), "Perlin noise", sf::Style::Close);
   window.setFramerateLimit(90);
 
-  mainFont.loadFromFile("../../src/fonts/Minecraft rus.ttf");
-
-  ////////////////
-
-  PerlinNoise pn;
+  srand(time(NULL));
+  PerlinNoise* pn = new PerlinNoise(256);
   sf::VertexArray vertices{sf::Points, WIDTH * HEIGHT};
   sf::Clock clock;
 
   for (int x = 0; x < WIDTH; x++)
     for (int y = 0; y < HEIGHT; y++)
-      vertices[x + y * WIDTH] = sf::Vertex(vec2(x, y));
+      vertices[x + y * WIDTH] = sf::Vertex(sf::Vector2f(x, y));
 
-  auto generateNoise = [&]() {
-    float time = clock.getElapsedTime().asSeconds();
+  const auto generateNoise2D = [&]() {
     for (int i = 0; i < vertices.getVertexCount(); i++) {
-      const vec2& pos = vertices[i].position;
-
+      const sf::Vector2f& pos = vertices[i].position;
       float n =
-        pn.noise3D(vec3(pos, time * 30.f) / 128.f) / 1.f +
-        pn.noise3D(vec3(pos, time * 30.f) / 64.f ) / 2.f +
-        pn.noise3D(vec3(pos, time * 64.f) / 32.f ) / 16.f;
+        pn->noise2D(pos.x / 64.f, pos.y / 64.f) * 1.f +
+        pn->noise2D(pos.x / 32.f, pos.y / 32.f) * 0.5f +
+        pn->noise2D(pos.x / 16.f, pos.y / 16.f) * 0.25f +
+        pn->noise2D(pos.x / 8.f , pos.y / 8.f ) * 0.125f;
 
-      vec3 mix1 = vec3::mix(vec3(1.f, 1.f, 0.f), vec3(1.f, 0.2f, 0.f), n + 1.f);
-      vec3 mix2 = vec3::mix(mix1, vec3(0.1f, 0.f, 0.f), n * 0.5f + 0.5f);
-
-      vertices[i].color = sf::Color(mix2.x * 255, mix2.y * 255, mix2.z * 255);
+      sf::Uint8 alpha = (n * 0.5f + 0.5f) * 255;
+      vertices[i].color = {255, 255, 255, alpha};
     }
   };
 
-  generateNoise();
+  generateNoise2D();
 
   while (window.isOpen()) {
     sf::Event event;
@@ -53,8 +43,8 @@ int main() {
             window.close();
             break;
           case sf::Keyboard::R:
-            pn.regenerate();
-            generateNoise();
+            pn->regenerate();
+            generateNoise2D();
             break;
           default:
             break;
@@ -65,6 +55,8 @@ int main() {
     window.draw(vertices);
     window.display();
   }
+
+  delete pn;
 
 	return 0;
 }
