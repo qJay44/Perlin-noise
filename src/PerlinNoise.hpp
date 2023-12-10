@@ -12,7 +12,6 @@ class PerlinNoise {
       return lhs.x * rhs.x + lhs.y * rhs.y;
     }
 
-    // TODO: Kinda slow
     inline static void normalize(vec2& v) {
       float m = v.magnitude();
       v.x /= m;
@@ -36,7 +35,6 @@ class PerlinNoise {
       return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
     }
 
-    // TODO: Kinda slow
     inline static void normalize(vec3& v) {
       float m = v.magnitude();
       v.x /= m;
@@ -59,12 +57,14 @@ class PerlinNoise {
   std::vector<vec3> permutation;
 
   void generate() {
+    constexpr int depth = 256;
+
     for (vec3& v : permutation) {
       v = vec3(
-        // Random in [0, 255] to [0, 1] to [-1, 1]
-        ((rand() % 256) / 255.f) * 2.f - 1.f,
-        ((rand() % 256) / 255.f) * 2.f - 1.f,
-        ((rand() % 256) / 255.f) * 2.f - 1.f
+        // Random value in [0, depth) to [0.f, 1.f] to [-1.f, 1.f]
+        rand() % depth / (depth - 1.f) * 2.f - 1.f,
+        rand() % depth / (depth - 1.f) * 2.f - 1.f,
+        rand() % depth / (depth - 1.f) * 2.f - 1.f
       );
     }
   }
@@ -97,18 +97,19 @@ class PerlinNoise {
   }
 
   public:
-    // @param size: the square size of the permutation table
+    // @param size: the size of the permutation table (squared)
     PerlinNoise(int size) : size(size) {
       permutation.resize(size * size);
       permutation.reserve(size * size);
       generate();
     }
 
+    // Generate new gradients
     void regenerate() {
       generate();
     }
 
-    // Return value in [-1, 1]
+    // Return float value in [-1, 1]
     float noise1D(float p) const {
       int p0 = floor(p);
       int p1 = p0 + 1;
@@ -119,7 +120,7 @@ class PerlinNoise {
       return (1.f - f) * g0 * (p - p0) + f * g1 * (p - p1);
     }
 
-    // Return value in [-1, 1]
+    // Return float value in [-1, 1]
     float noise2D(float x, float y) const {
       vec2 p = vec2(x, y);
       vec2 p0 = vec2(floor(x), floor(y));     // Top-left
@@ -147,6 +148,7 @@ class PerlinNoise {
       return (1.f - fade_t1) * p0p1 + fade_t1 * p2p3;
     }
 
+    // Return float value in [-1, 1]
     float noise3D(float x, float y, float z) {
       /* Calculate lattice points. */
       vec3 p = vec3(x, y, z);
